@@ -40,7 +40,7 @@ public class Tree_Maker {
         }
     }
     protected static void LinkFinder(URL url){//Simpler Link Finder
-        LinkFinder(url, 200, 0);
+        LinkFinder(url, 2000, 0);
     }
     protected static void LinkFinder(URL url, int layerlimit, int layer){
         Document doc = null;
