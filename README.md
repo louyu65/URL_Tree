@@ -1,5 +1,5 @@
 # URL_Tree
-## Java Project
+##  Java Project
 
 This is a simple Java Project that I made in my free time. 
 Starting with a given link (wikipedia.com by default), it searches the site for links and follows those links (limited to a 
