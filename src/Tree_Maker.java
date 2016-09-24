@@ -22,18 +22,22 @@ public class Tree_Maker {
     private static HashSet<String> baseURLs = new HashSet<>();
     public static String PrintString = "";
     public static int counter = 0;//Link Counter. Once it hits the LEN_LIMIT, the LinkFinder Stops
-    public static int LEN_LIMIT = 10001; //GIVEN LIMIT TODO: Convert into Parameter
+    public static int LEN_LIMIT = 60001; //GIVEN LIMIT TODO: Convert into Parameter
     public static long time;
+    public static ArrayList<Double> Breaks = new ArrayList<>();
     public static boolean printBreak = false;
     public static void main(String[] args) throws MalformedURLException {
         time = System.nanoTime();
-        LinkFinder(new URL("https://en.wikipedia.org/wiki/Main_Page"));//Calls The initial LinkFinder
+        LinkFinder(new URL("https://www.wikipedia.org/"));//Calls The initial LinkFinder
         System.out.println("\n");//Link Finder has ended
         System.out.println("\nBREAKPOINT");
         System.out.println((System.nanoTime() - time) / 1000000000.0 + " seconds elapsed");
         System.out.println(counter + " URL's");
-        System.out.println(((System.nanoTime() - time) / counter) / 1000000000.0 + " seconds per URL");
+        System.out.println(Breaks.get(Breaks.size()-1) + " seconds per URL");
         System.out.println("\n");
+        for (double leng : Breaks){
+            System.out.print(leng + ", ");
+        }
     }
     protected static void LinkFinder(URL url){//Simpler Link Finder
         LinkFinder(url, 200, 0);
@@ -42,8 +46,9 @@ public class Tree_Maker {
         Document doc = null;
         ArrayList<String> cur_branch = new ArrayList<>();
         if(counter < LEN_LIMIT)//If left to the inner check, it wouldn't stop TODO: Look into better solutions to ensuring LinkFinder stops
-        try {
+            try {
                 doc = Jsoup.connect(String.valueOf(url)).get();//Connect and Get URL
+//
                 Elements links = doc.select("a[href]");//Get all the Links
 
                 for (Element link : links) {
@@ -60,14 +65,8 @@ public class Tree_Maker {
 
                             PrintString += (new String(new char[layer]).replace("\0", ":") +" "+ attr + " (" + counter + ") \n");
                             if(counter % 100 == 0 && counter > 0){
-                                if(printBreak) {
-                                    System.out.println("\nBREAKPOINT");
-                                    System.out.println((System.nanoTime() - time) / 1000000000.0 + " seconds elapsed");
-                                    System.out.println(counter + " URL's");
-                                    System.out.println(((System.nanoTime() - time) / counter) / 1000000000.0 + " seconds per URL");
-                                    System.out.println("\n");
-                                }
-                                if(counter %1000 == 0){
+                                Breaks.add(((System.nanoTime() - time) / counter) / 1000000000.0);
+                                if(counter %2000 == 0){
                                     System.out.print(PrintString);
                                     PrintString = "";
                                 }
@@ -80,17 +79,18 @@ public class Tree_Maker {
 
 
                 }
+
                 for (String newer: cur_branch) {
                     LinkFinder(new URL(newer), layerlimit, layer + 1);//Loop through the branches later (Provides more even layer distribution)
                 }
 
-        }
-        catch (HttpStatusException e){
+            }
+            catch (HttpStatusException e){
 
-        }
-        catch (IOException e) {
+            }
+            catch (IOException e) {
 
-        }
+            }
 
     }
 
