@@ -7,6 +7,7 @@ import org.jsoup.select.Elements;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.HashMap;
 
 /**
  * @author stephenharlow
@@ -17,36 +18,40 @@ import java.net.URL;
  *         Created on September 23, 2016
  */
 public class Tree_Maker {
-    public static int counter = 0;
-    static Tree root;
-    public static int LEN_LIMIT = 1000;
+    private static HashMap<String, Tree> baseURLs = new HashMap<>();
+    public static int counter = 0;//Link Counter. Once it hits the LEN_LIMIT, the LinkFinder Stops
+    static Tree root;//Root Tree (First URL)
+    public static int LEN_LIMIT = 2000; //GIVEN LIMIT TODO: Convert into Parameter
+    public static int LEVEL_LIMIT = 5; //GIVEN LIMIT TODO: Convert into Parameter
     public static void main(String[] args) throws MalformedURLException {
-        root = new Tree("http://stephenharlow.com/");
-        LinkFinder(root.getHeadLink(), root);
-        System.out.println("\n");
-        PrintTree(root, "");
+        root = new Tree("http://stephenharlow.com/");//Start with my website
+        LinkFinder(root.getHeadLink(), root);//Calls The initial LinkFinder
+        System.out.println("\n");//Link Finder has ended, Print the Tree
+        PrintTree(root, "");//Print with no pre-text
 
     }
     public static void PrintTree(Tree input, String beg){
-        for(Tree sub: input.branches){
-            System.out.println(beg + sub.headLink);
-            PrintTree(sub, beg + "\t");
+        for(Tree sub: input.branches){//Loop through the Branches and Recursively Print
+            System.out.println(beg + sub.headLink); //Print the Pre-Text and the link (Allows for more visual depth)
+            PrintTree(sub, beg + "\t");//Add another tab to the pre-text
         }
     }
-    public static boolean SearchTree(URL link){
+    public static boolean SearchTree(URL link){//Simple way to Search from the Root Tree
         return LoopTree(root.getRootTree(root), link);
     }
-    public static boolean LoopTree(Tree search, URL link) {
+    public static boolean LoopTree(Tree search, URL link) { //Loop Through and Call SearchTree(__,___)
         boolean ret = true;
         for (Tree item : search.getBranches()) {
-            ret = ret && SearchTree(item, link);
+            ret = ret && SearchTree(item, link);//If All of them plus this one return true
         }
         return ret;
 
     }
-    protected static boolean SearchTree(Tree search, URL link){
+    protected static boolean SearchTree(Tree search, URL link){//Overloaded SearchTree to search outside Root
         //Loop through the URL Keys in the Branches
-        return (search.getHeadLink().equals(link) ? false:LoopTree(search, link));
+        return (!search.getHeadLink().equals(link) && LoopTree(search, link));//Simple Way to find if the head link and desired link are equal
+        //Then if they are: Return False and SKip this link
+        //If they aren't: Loop Through the Branches
 /*
        if(search.getHeadLink().equals(link)){
             //Already Exists. Abort
@@ -58,37 +63,54 @@ public class Tree_Maker {
 */
 
     }
-    protected static void LinkFinder(URL url, Tree toAdd){
-        LinkFinder(url, toAdd, 10, 0);
+    protected static void LinkFinder(URL url, Tree toAdd){//Simpler Link Finder
+        LinkFinder(url, toAdd, 20, 0);
     }
     protected static void LinkFinder(URL url, Tree toAdd, int layerlimit, int layer){
         Document doc = null;
-        if(counter < LEN_LIMIT)
+        if(counter < LEN_LIMIT)//If left to the inner check, it wouldn't stop TODO: Look into better solutions to ensuring LinkFinder stops
         try {
-            doc = Jsoup.connect(String.valueOf(url)).get();
-            Elements links = doc.select("a[href]");
-            System.out.println(toAdd.headLink);
-            for (Element link : links) {
-                String attr = link.attr("abs:href");
-                try {
-                    if(attr.compareTo(String.valueOf(toAdd.headLink)) != 0 && SearchTree(new URL(attr)) && layer < layerlimit && counter < LEN_LIMIT){
-                        System.out.println(attr + " " + trim(link.text(), 35));
+                doc = Jsoup.connect(String.valueOf(url)).get();//Connect and Get URL
+                Elements links = doc.select("a[href]");//Get all the Links
 
-                        toAdd.branches.add(new Tree(toAdd, new URL(attr)));
-                        counter += 1;
-                        System.out.println(counter);
+                for (Element link : links) {
+                    String attr = link.attr("abs:href").toLowerCase();
+                    if(!baseURLs.containsKey(attr)){
+                        try {
+                            //attr.compareTo(String.valueOf(toAdd.headLink)) != 0 && SearchTree(new URL(attr)) && layer < layerlimit && counter < LEN_LIMIT
+                            if (layer < layerlimit && counter < LEN_LIMIT) {
+                                //Compare HeadLink and toAdd.Link
+                                //Search from the root for the link
+                                //TODO: Look into a Binary type search with sorted branches
+                                //Check if layer is below the limit (Don't want to follow a single link too far and ignore others)
+                                //Check if the LinkFinder should stop
+
+                                System.out.println(attr + " " + trim(link.text(), 35));
+                                //Used to print links and the titles given to them
+                                Tree set = new Tree(toAdd, new URL(attr));
+                                toAdd.branches.add(set);//Add the branches now
+                                baseURLs.put(attr, set);
+                                counter += 1;
+                                System.out.println(counter);
+                            }
+                        } catch (MalformedURLException e) {
+                            e.printStackTrace();
+                        }
                     }
-                } catch (MalformedURLException e) {
-                    e.printStackTrace();
+
+
+                }
+                for (Tree newer: toAdd.branches) {
+
+                    LinkFinder(newer.getHeadLink(), newer, layerlimit, layer + 1);//Loop through the branches later (Provides more even layer distribution)
                 }
 
+        }
+        catch (HttpStatusException e){
 
-            }
-            for(Tree newer: toAdd.branches){
-                LinkFinder(newer.getHeadLink(), newer, layerlimit, layer + 1);
-            }
-        } catch (HttpStatusException e){
-        } catch (IOException e) {
+        }
+        catch (IOException e) {
+
         }
 
     }
@@ -98,13 +120,11 @@ public class Tree_Maker {
     }
 
     private static String trim(String s, int width) {
+        //Trims to a certain Width
+
         if (s.length() > width)
             return s.substring(0, width-1) + ".";
         else
             return s;
-    }
-
-    public void LinkFinder(String url) throws MalformedURLException {
-        LinkFinder(new URL(url), root);
     }
 }
