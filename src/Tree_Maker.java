@@ -19,12 +19,14 @@ import java.util.HashMap;
  */
 public class Tree_Maker {
     private static HashMap<String, Tree> baseURLs = new HashMap<>();
+    public static String PrintString = "";
     public static int counter = 0;//Link Counter. Once it hits the LEN_LIMIT, the LinkFinder Stops
     static Tree root;//Root Tree (First URL)
-    public static int LEN_LIMIT = 2000; //GIVEN LIMIT TODO: Convert into Parameter
-    public static int LEVEL_LIMIT = 5; //GIVEN LIMIT TODO: Convert into Parameter
+    public static int LEN_LIMIT = 5000; //GIVEN LIMIT TODO: Convert into Parameter
+    public static long time;
     public static void main(String[] args) throws MalformedURLException {
-        root = new Tree("http://stephenharlow.com/");//Start with my website
+        root = new Tree("https://en.wikipedia.org/wiki/Main_Page");//Start with my website
+        time = System.nanoTime();
         LinkFinder(root.getHeadLink(), root);//Calls The initial LinkFinder
         System.out.println("\n");//Link Finder has ended, Print the Tree
         PrintTree(root, "");//Print with no pre-text
@@ -64,7 +66,7 @@ public class Tree_Maker {
 
     }
     protected static void LinkFinder(URL url, Tree toAdd){//Simpler Link Finder
-        LinkFinder(url, toAdd, 20, 0);
+        LinkFinder(url, toAdd, 200, 0);
     }
     protected static void LinkFinder(URL url, Tree toAdd, int layerlimit, int layer){
         Document doc = null;
@@ -81,17 +83,27 @@ public class Tree_Maker {
                             if (layer < layerlimit && counter < LEN_LIMIT) {
                                 //Compare HeadLink and toAdd.Link
                                 //Search from the root for the link
-                                //TODO: Look into a Binary type search with sorted branches
                                 //Check if layer is below the limit (Don't want to follow a single link too far and ignore others)
                                 //Check if the LinkFinder should stop
+//+ " " + trim(link.text(), 35)
+                                counter += 1;
 
-                                System.out.println(attr + " " + trim(link.text(), 35));
+                                PrintString += (new String(new char[layer]).replace("\0", "_") +" "+ attr + " (" + counter + ") \n");
+                                if(counter % 100 == 0 && counter > 0){
+                                    System.out.println("\nBREAKPOINT");
+                                    System.out.println((System.nanoTime()-time)/1000000000.0 + " seconds elapsed");
+                                    System.out.println(counter + " URL's");
+                                    System.out.println(((System.nanoTime()-time)/counter)/1000000000.0 + " seconds per URL");
+                                    System.out.println("\n");
+                                    if(counter %1000 == 0){
+                                        System.out.print(PrintString);
+                                        PrintString = "";
+                                    }
+                                }
                                 //Used to print links and the titles given to them
                                 Tree set = new Tree(toAdd, new URL(attr));
                                 toAdd.branches.add(set);//Add the branches now
                                 baseURLs.put(attr, set);
-                                counter += 1;
-                                System.out.println(counter);
                             }
                         } catch (MalformedURLException e) {
                             e.printStackTrace();
@@ -101,7 +113,6 @@ public class Tree_Maker {
 
                 }
                 for (Tree newer: toAdd.branches) {
-
                     LinkFinder(newer.getHeadLink(), newer, layerlimit, layer + 1);//Loop through the branches later (Provides more even layer distribution)
                 }
 
